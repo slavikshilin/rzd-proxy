@@ -114,7 +114,7 @@ http.createServer(function (req, res) {
     console.log(url);
     getRzdApiRequest(url, res)
 
-}).listen(8124);
+}).listen(process.env.PORT || 4000);
 
 
-console.log('Server running on 8124');
+console.log('Server running');

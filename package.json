@@ -1,0 +1,22 @@
+{
+  "name": "rzd-wrapper-backend",
+  "version": "1.0.0",
+  "description": "Backend for rzd-wrapper",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "rzd-wrapper"
+  ],
+  "author": "v.shilin",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.18.0",
+    "axios-cookiejar-support": "^0.4.2",
+    "express": "^4.16.3",
+    "request": "^2.88.0",
+    "tough-cookie": "^2.4.3"
+  }
+}

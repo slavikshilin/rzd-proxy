@@ -25,73 +25,66 @@ function getCookie(cookies, name) {
 
 function getJsonResponse(res, data, url, cookieJar) {
     var cookies = ''
-    var authInfo = null
     var token = null
     var authFlag = false
 
-    // remove token from list
-    if (Object.keys(data).length === 0) {
+    var urlSegments = urlapi.parse(url)
+    var isLogin = urlSegments.pathname && (urlSegments.pathname.search(/security_check/i) !== -1)
+    var isLogout = urlSegments.pathname && (urlSegments.pathname.search(/security_logout/i) !== -1)
+
+    if (isLogin) {
+        token = crypto.randomBytes(64).toString('hex');
+        tokenList.push( { token: token, data: cookieJar })
+        console.log('Create token:' + token);      
+        
+        cookieJar.getCookies(url,function(err, cookieList) {       
+            cookies = cookieList.join('; ')
+            if (getCookie(cookies, 'AuthFlag')) {
+                authFlag = JSON.parse(getCookieValue(cookies, 'AuthFlag'))
+                console.log("AuthFlag=" + authFlag);
+                if (!authFlag) {
+                    data = {}
+                }
+            }
+        });          
+
+    } else if (isLogout) {
+        // remove token from list
         var found = tokenList.find(function(item) { return item.data === cookieJar });
         if (found) {
-            tokenList.splice( tokenList.indexOf(found), 1 );
+            token = tokenList[tokenList.indexOf(found)].token
+            tokenList.splice( tokenList.indexOf(found), 1 )
         }
     }
-
-    cookieJar.getCookies(url,function(err, cookieList) {       
-        cookies = cookieList.join('; ')
-        if (getCookie(cookies, 'AuthFlag')) {
-            authFlag = JSON.parse(getCookieValue(cookies, 'AuthFlag'))
-            console.log("AuthFlag=" + authFlag);
-            if (!authFlag) {
-                data = {}
-            } else {
-                token = crypto.randomBytes(64).toString('hex');
-                tokenList.push( { token: token, data: cookieJar })
-                console.log(token);                
-            }
-            authInfo = { authFlag: authFlag }
-        }
-
-      });    
 
     res.writeHead(200, {
         'Content-Type': 'application/json; charset=utf-8',
         'Access-Control-Allow-Credentials': true,
         'Access-Control-Allow-Methods': 'GET, POST',
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Set-Cookie': cookies
+        'Access-Control-Allow-Headers': 'Content-Type'
     });
 
-    var response = authInfo ? {data, authFlag, token } : { data }
+    var response = (isLogin || isLogout) ? {data, authFlag, token } : { data }
     res.end(JSON.stringify(response));
 }
 
 function getRzdApiRequest(url, res) {
 
+    console.log('Receive url:' + url)
     var cookieJar = new tough.CookieJar()    
-
     var urlSegments = urlapi.parse(url)
     var urlParams = urlSegments.query
-    console.log(urlParams)
+
     if (urlParams) {
         var params = querystring.parse(urlParams)
         console.log(params)
         if (params.token) {
-            console.log('token found: ' + params.token) 
-
+            console.log('Token found: ' + params.token) 
             var found = tokenList.find(function(item) { return item.token === params.token });
             if (found) {
                 console.log('Cookes for rzd: ' + found.data)
                 cookieJar = found.data
-                /*
-                cookieJar.setCookie(found.data, url, (err, cookie) => {
-                    if(err) {
-                        reject(new Error(err));
-                        return;
-                    }
-                })
-                */
             }
         }
     }
@@ -109,12 +102,14 @@ function getRzdApiRequest(url, res) {
     });
 }
 
+var port = process.env.PORT || 4000
+
 http.createServer(function (req, res) {
     var url = 'https://m.rzd.ru' + req.url;
     console.log(url);
     getRzdApiRequest(url, res)
 
-}).listen(process.env.PORT || 4000);
+}).listen(port);
 
 
-console.log('Server running');
+console.log('Server running on port ' + port);
